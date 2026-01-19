@@ -75,6 +75,17 @@ export interface AffectedMarket {
   question: string;
   similarityScore: number;
   currentPrice?: number;
+  // Fair value fields (calculated when available)
+  fairValue?: number;
+  edge?: number;
+  edgePercent?: number;
+  signal?: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+  side?: 'YES' | 'NO';
+  entryPrice?: number;
+  targetPrice?: number;
+  stopLoss?: number;
+  suggestedSize?: number;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
 export interface NewsWithMarkets {
@@ -196,21 +207,21 @@ function getMockAffectedMarkets(headline: string): AffectedMarket[] {
   const headlineLower = headline.toLowerCase();
   
   const allMarkets: AffectedMarket[] = [
-    // Fed-related
-    { venue: 'KALSHI', id: 'FED-26JAN-T4.50', question: 'Will the Fed cut rates in January 2026?', similarityScore: 0.92 },
-    { venue: 'POLYMARKET', id: 'fed-rate-jan-2026', question: 'Will Federal Reserve cut interest rates at January 2026 FOMC?', similarityScore: 0.91 },
-    { venue: 'KALSHI', id: 'FED-26MAR-T4.25', question: 'Will Fed funds rate be at or below 4.25% by March 2026?', similarityScore: 0.85 },
-    { venue: 'POLYMARKET', id: 'recession-2026', question: 'Will the US enter a recession in 2026?', similarityScore: 0.72 },
-    { venue: 'KALSHI', id: 'INFLATION-26Q1-A3', question: 'Will CPI inflation be above 3% in Q1 2026?', similarityScore: 0.78 },
+    // Fed-related (with mock current prices)
+    { venue: 'KALSHI', id: 'FED-26JAN-T4.50', question: 'Will the Fed cut rates in January 2026?', similarityScore: 0.92, currentPrice: 0.65 },
+    { venue: 'POLYMARKET', id: 'fed-rate-jan-2026', question: 'Will Federal Reserve cut interest rates at January 2026 FOMC?', similarityScore: 0.91, currentPrice: 0.62 },
+    { venue: 'KALSHI', id: 'FED-26MAR-T4.25', question: 'Will Fed funds rate be at or below 4.25% by March 2026?', similarityScore: 0.85, currentPrice: 0.71 },
+    { venue: 'POLYMARKET', id: 'recession-2026', question: 'Will the US enter a recession in 2026?', similarityScore: 0.72, currentPrice: 0.28 },
+    { venue: 'KALSHI', id: 'INFLATION-26Q1-A3', question: 'Will CPI inflation be above 3% in Q1 2026?', similarityScore: 0.78, currentPrice: 0.45 },
     
-    // Crypto-related
-    { venue: 'POLYMARKET', id: 'btc-100k-jan-2026', question: 'Will Bitcoin reach $100,000 by January 31, 2026?', similarityScore: 0.94 },
-    { venue: 'KALSHI', id: 'BTC-26JAN-100K', question: 'Will Bitcoin be above $100,000 by end of January 2026?', similarityScore: 0.93 },
-    { venue: 'POLYMARKET', id: 'eth-5000-2026', question: 'Will Ethereum reach $5,000 in 2026?', similarityScore: 0.75 },
+    // Crypto-related (with mock current prices)
+    { venue: 'POLYMARKET', id: 'btc-100k-jan-2026', question: 'Will Bitcoin reach $100,000 by January 31, 2026?', similarityScore: 0.94, currentPrice: 0.72 },
+    { venue: 'KALSHI', id: 'BTC-26JAN-100K', question: 'Will Bitcoin be above $100,000 by end of January 2026?', similarityScore: 0.93, currentPrice: 0.70 },
+    { venue: 'POLYMARKET', id: 'eth-5000-2026', question: 'Will Ethereum reach $5,000 in 2026?', similarityScore: 0.75, currentPrice: 0.35 },
     
-    // Politics
-    { venue: 'POLYMARKET', id: 'trump-2024', question: 'Will Trump win the 2024 presidential election?', similarityScore: 0.88 },
-    { venue: 'KALSHI', id: 'PRES-2024-REP', question: 'Will a Republican win the 2024 presidential election?', similarityScore: 0.85 },
+    // Politics (with mock current prices)
+    { venue: 'POLYMARKET', id: 'trump-2024', question: 'Will Trump win the 2024 presidential election?', similarityScore: 0.88, currentPrice: 0.52 },
+    { venue: 'KALSHI', id: 'PRES-2024-REP', question: 'Will a Republican win the 2024 presidential election?', similarityScore: 0.85, currentPrice: 0.54 },
   ];
   
   // Filter based on headline content
@@ -299,44 +310,58 @@ function similarity(a: string, b: string): number {
 /**
  * Analyze headline for category and magnitude
  */
-async function analyzeHeadline(headline: string): Promise<{ category: string; magnitude: 'HIGH' | 'MEDIUM' | 'LOW'; direction: string }> {
+async function analyzeHeadline(headline: string): Promise<{ category: string; magnitude: 'HIGH' | 'MEDIUM' | 'LOW'; direction: string; confidence: number }> {
   // Quick heuristic-based analysis (faster than LLM call)
   const headlineLower = headline.toLowerCase();
   
   let category = 'general';
   let magnitude: 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM';
   let direction = 'neutral';
+  let confidence = 0.6; // Base confidence
   
   // Detect category
   if (headlineLower.match(/fed|fomc|rate|interest|powell/)) {
     category = 'federal_reserve';
+    confidence += 0.1;
   } else if (headlineLower.match(/bitcoin|btc|crypto|ethereum|eth|etf/)) {
     category = 'crypto';
+    confidence += 0.1;
   } else if (headlineLower.match(/trump|biden|election|president|congress/)) {
     category = 'politics';
+    confidence += 0.1;
   } else if (headlineLower.match(/inflation|cpi|pce|prices/)) {
     category = 'inflation';
+    confidence += 0.1;
   } else if (headlineLower.match(/recession|gdp|economy|jobs|unemployment/)) {
     category = 'economy';
+    confidence += 0.1;
   }
   
   // Detect magnitude
   if (headlineLower.match(/breaking|urgent|shock|crash|surge|plunge|record|emergency/)) {
     magnitude = 'HIGH';
+    confidence += 0.15;
   } else if (headlineLower.match(/announces|confirms|official|approved|passes/)) {
     magnitude = 'HIGH';
+    confidence += 0.15;
   } else if (headlineLower.match(/reports|expects|likely|may|could/)) {
     magnitude = 'LOW';
+    confidence -= 0.1;
   }
   
   // Detect direction
   if (headlineLower.match(/cut|lower|drop|fall|crash|plunge|down|bear|sell/)) {
     direction = 'negative';
+    confidence += 0.05;
   } else if (headlineLower.match(/raise|hike|surge|jump|up|bull|buy|approve|pass/)) {
     direction = 'positive';
+    confidence += 0.05;
   }
   
-  return { category, magnitude, direction };
+  // Clamp confidence to valid range
+  confidence = Math.max(0.3, Math.min(0.95, confidence));
+  
+  return { category, magnitude, direction, confidence };
 }
 
 /**
@@ -418,13 +443,109 @@ export async function startMonitoring(
 }
 
 /**
+ * Calculate fair value for a market given news analysis
+ */
+function calculateFairValue(
+  market: AffectedMarket,
+  newsAnalysis: { magnitude: string; direction: string; confidence: number }
+): AffectedMarket {
+  // Default current price if not available
+  const currentPrice = market.currentPrice ?? 0.5;
+  
+  // Calculate price shift based on news magnitude and direction
+  const magnitude = newsAnalysis.magnitude === 'HIGH' ? 0.85 : 
+                    newsAnalysis.magnitude === 'MEDIUM' ? 0.5 : 0.25;
+  
+  let baseShift: number;
+  if (magnitude > 0.8) {
+    baseShift = 0.15 + (magnitude - 0.8) * 0.5; // 15-25%
+  } else if (magnitude > 0.5) {
+    baseShift = 0.05 + (magnitude - 0.5) * 0.33; // 5-15%
+  } else {
+    baseShift = magnitude * 0.1; // 0-5%
+  }
+  
+  // Apply direction
+  if (newsAnalysis.direction === 'negative') {
+    baseShift = -baseShift;
+  } else if (newsAnalysis.direction === 'neutral') {
+    baseShift = baseShift * 0.2;
+  }
+  
+  // Adjust for confidence and similarity
+  const adjustedShift = baseShift * newsAnalysis.confidence * market.similarityScore;
+  
+  // Calculate fair value
+  let fairValue = currentPrice + adjustedShift;
+  fairValue = Math.max(0.01, Math.min(0.99, fairValue));
+  
+  // Calculate edge
+  const edge = fairValue - currentPrice;
+  const edgePercent = currentPrice > 0 ? (edge / currentPrice) * 100 : 0;
+  
+  // Determine signal
+  const edgeAbs = Math.abs(edge);
+  let signal: AffectedMarket['signal'] = 'HOLD';
+  if (edgeAbs > 0.15 && newsAnalysis.confidence > 0.7) {
+    signal = edge > 0 ? 'STRONG_BUY' : 'STRONG_SELL';
+  } else if (edgeAbs > 0.08) {
+    signal = edge > 0 ? 'BUY' : 'SELL';
+  } else if (edgeAbs > 0.05) {
+    signal = edge > 0 ? 'BUY' : 'SELL';
+  }
+  
+  // Calculate trade parameters
+  const side: 'YES' | 'NO' = edge > 0 ? 'YES' : 'NO';
+  const entryPrice = edge > 0 
+    ? Math.min(currentPrice + 0.02, fairValue - 0.03)
+    : Math.max(currentPrice - 0.02, fairValue + 0.03);
+  const targetPrice = fairValue;
+  const stopLoss = edge > 0 ? currentPrice - 0.12 : currentPrice + 0.12;
+  
+  // Position sizing based on edge and confidence
+  let suggestedSize = 250; // Max $250
+  if (edgeAbs < 0.05) suggestedSize *= 0.5;
+  else if (edgeAbs < 0.10) suggestedSize *= 0.75;
+  suggestedSize = Math.round(suggestedSize / 25) * 25;
+  
+  const confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 
+    edgeAbs > 0.15 ? 'HIGH' : edgeAbs > 0.08 ? 'MEDIUM' : 'LOW';
+  
+  return {
+    ...market,
+    currentPrice: Math.round(currentPrice * 100) / 100,
+    fairValue: Math.round(fairValue * 100) / 100,
+    edge: Math.round(edge * 100) / 100,
+    edgePercent: Math.round(edgePercent * 10) / 10,
+    signal: signal === 'HOLD' ? undefined : signal,
+    side: signal === 'HOLD' ? undefined : side,
+    entryPrice: signal === 'HOLD' ? undefined : Math.round(entryPrice * 100) / 100,
+    targetPrice: signal === 'HOLD' ? undefined : Math.round(targetPrice * 100) / 100,
+    stopLoss: signal === 'HOLD' ? undefined : Math.round(stopLoss * 100) / 100,
+    suggestedSize: signal === 'HOLD' ? undefined : suggestedSize,
+    confidence: signal === 'HOLD' ? undefined : confidence,
+  };
+}
+
+/**
  * One-time analysis (for testing)
  */
-export async function analyzeOnce(headline: string): Promise<NewsWithMarkets> {
+export async function analyzeOnce(headline: string, includeFairValue: boolean = true): Promise<NewsWithMarkets> {
   const startTime = Date.now();
   
   const analysis = await analyzeHeadline(headline);
-  const markets = await findAffectedMarkets(headline);
+  let markets = await findAffectedMarkets(headline);
+  
+  // Calculate fair values if requested
+  if (includeFairValue) {
+    const newsAnalysis = {
+      magnitude: analysis.magnitude,
+      direction: analysis.direction || 'neutral',
+      confidence: analysis.confidence || 0.7,
+    };
+    
+    markets = markets.map(market => calculateFairValue(market, newsAnalysis));
+  }
   
   return {
     news: {

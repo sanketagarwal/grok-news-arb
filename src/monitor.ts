@@ -154,25 +154,72 @@ function printNewsResult(result: NewsWithMarkets) {
   if (affectedMarkets.length === 0) {
     console.log(chalk.yellow('\n   ⚠️  No matching prediction markets found'));
   } else {
-    console.log(chalk.green.bold('\n   🎯 AFFECTED MARKETS:'));
+    console.log(chalk.green.bold('\n   🎯 AFFECTED MARKETS:\n'));
     
     affectedMarkets.forEach((market, i) => {
       const venueColor = market.venue === 'KALSHI' ? chalk.blue : chalk.magenta;
       const scoreColor = market.similarityScore > 0.85 ? chalk.green : 
                          market.similarityScore > 0.7 ? chalk.yellow : chalk.gray;
       
-      const prefix = i === affectedMarkets.length - 1 ? '└─' : '├─';
+      // Market header
+      console.log(chalk.cyan(`   ┌${'─'.repeat(72)}┐`));
+      console.log(chalk.cyan(`   │ `) + 
+                  venueColor(`[${market.venue}] `) + 
+                  chalk.white.bold(market.question.slice(0, 55).padEnd(55)) + 
+                  chalk.cyan(` │`));
+      console.log(chalk.cyan(`   │ `) + 
+                  chalk.gray(`Match: `) + scoreColor(`${Math.round(market.similarityScore * 100)}%`.padEnd(6)) +
+                  chalk.cyan(` │`));
       
-      console.log(
-        chalk.gray(`   ${prefix} `) +
-        venueColor(`[${market.venue.padEnd(10)}] `) +
-        chalk.white(`"${market.question}"`) +
-        scoreColor(` ${Math.round(market.similarityScore * 100)}% match`)
-      );
+      // Fair value & trade signal (if calculated)
+      if (market.fairValue !== undefined && market.edge !== undefined) {
+        const currentPriceStr = `${Math.round((market.currentPrice || 0.5) * 100)}¢`;
+        const fairValueStr = `${Math.round(market.fairValue * 100)}¢`;
+        const edgeStr = market.edge > 0 ? `+${Math.round(market.edge * 100)}¢` : `${Math.round(market.edge * 100)}¢`;
+        const edgePercentStr = market.edgePercent !== undefined ? 
+          (market.edgePercent > 0 ? `+${market.edgePercent.toFixed(1)}%` : `${market.edgePercent.toFixed(1)}%`) : '';
+        
+        const edgeColor = Math.abs(market.edge) > 0.10 ? chalk.green.bold : 
+                          Math.abs(market.edge) > 0.05 ? chalk.green : chalk.yellow;
+        
+        console.log(chalk.cyan(`   ├${'─'.repeat(72)}┤`));
+        console.log(chalk.cyan(`   │ `) + 
+                    chalk.gray(`Current: `) + chalk.white(currentPriceStr.padEnd(6)) +
+                    chalk.gray(` │ Fair Value: `) + chalk.white(fairValueStr.padEnd(6)) +
+                    chalk.gray(` │ Edge: `) + edgeColor(`${edgeStr} (${edgePercentStr})`.padEnd(16)) +
+                    chalk.cyan(` │`));
+        
+        // Trade signal
+        if (market.signal && market.signal !== 'HOLD') {
+          const signalIcon = market.signal.includes('BUY') ? '💹' : '📉';
+          const signalColor = market.signal.includes('BUY') ? chalk.green.bold : chalk.red.bold;
+          const confidenceColor = market.confidence === 'HIGH' ? chalk.green : 
+                                  market.confidence === 'MEDIUM' ? chalk.yellow : chalk.gray;
+          
+          console.log(chalk.cyan(`   │ `) + 
+                      signalIcon + ` ` + signalColor(`${market.signal} ${market.side}`.padEnd(18)) +
+                      chalk.gray(`Confidence: `) + confidenceColor(`${market.confidence}`.padEnd(8)) +
+                      chalk.gray(`Size: `) + chalk.white(`$${market.suggestedSize}`.padEnd(10)) +
+                      chalk.cyan(`      │`));
+          
+          console.log(chalk.cyan(`   │ `) + 
+                      chalk.gray(`Entry: `) + chalk.white(`≤${Math.round((market.entryPrice || 0) * 100)}¢`.padEnd(8)) +
+                      chalk.gray(`Target: `) + chalk.green(`${Math.round((market.targetPrice || 0) * 100)}¢`.padEnd(8)) +
+                      chalk.gray(`Stop: `) + chalk.red(`${Math.round((market.stopLoss || 0) * 100)}¢`.padEnd(8)) +
+                      chalk.cyan(`                      │`));
+        } else {
+          console.log(chalk.cyan(`   │ `) + 
+                      chalk.gray(`⏸️  HOLD - Edge too small for confident trade`.padEnd(70)) +
+                      chalk.cyan(` │`));
+        }
+      }
+      
+      console.log(chalk.cyan(`   └${'─'.repeat(72)}┘`));
+      console.log('');
     });
   }
   
-  console.log(chalk.gray(`\n   ⏱️  Analysis time: ${analysisTime}ms`));
+  console.log(chalk.gray(`   ⏱️  Analysis time: ${analysisTime}ms`));
 }
 
 // Run
