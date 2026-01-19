@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import VerificationPanel from '@/components/VerificationPanel';
+
+type Tab = 'arbitrage' | 'verification';
 
 interface MarketSignal {
   platform: string;
@@ -37,6 +40,7 @@ interface AnalysisResult {
 }
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<Tab>('arbitrage');
   const [headline, setHeadline] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -73,7 +77,7 @@ export default function Home() {
     <main className="min-h-screen p-8">
       {/* Header */}
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
             🚀 Grok News Arbitrage
           </h1>
@@ -82,6 +86,38 @@ export default function Home() {
           </p>
         </div>
 
+        {/* Tab Navigation */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-gray-900/50 rounded-xl p-1 border border-gray-700/50">
+            <button
+              onClick={() => setActiveTab('arbitrage')}
+              className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+                activeTab === 'arbitrage'
+                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-black'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              📰 News Arbitrage
+            </button>
+            <button
+              onClick={() => setActiveTab('verification')}
+              className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+                activeTab === 'verification'
+                  ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              🔬 Market Verification
+            </button>
+          </div>
+        </div>
+
+        {/* Verification Tab */}
+        {activeTab === 'verification' && <VerificationPanel />}
+
+        {/* Arbitrage Tab */}
+        {activeTab === 'arbitrage' && (
+          <>
         {/* Input */}
         <div className="market-card p-6 mb-8">
           <label className="block text-sm text-gray-400 mb-2">
@@ -261,6 +297,8 @@ export default function Home() {
               )}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </main>

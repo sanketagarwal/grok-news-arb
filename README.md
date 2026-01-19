@@ -56,17 +56,33 @@ cp env.example .env
 
 Edit `.env` with your API keys (see [Required API Keys](#-required-api-keys) below).
 
-### 3. Run CLI Demo
+### 3. Run Live Monitor (NEW!)
 
 ```bash
-# Analyze a headline
+# Start continuous news monitoring
+npm run monitor
+
+# Test with sample headlines
+npm run test-monitor
+
+# Analyze specific headline
+npm run monitor -- --headline "Fed cuts rates 25bps"
+
+# Custom poll interval (default 30s)
+npm run monitor -- --interval 60
+```
+
+### 4. Run CLI Demo
+
+```bash
+# Analyze a headline (one-time)
 npm run cli -- --headline "Fed cuts rates 25bps"
 
 # Interactive mode
 npm run cli -- --interactive
 ```
 
-### 4. Run Web UI
+### 5. Run Web UI
 
 ```bash
 npm run dev

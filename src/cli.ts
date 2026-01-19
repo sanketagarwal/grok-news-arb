@@ -1,7 +1,9 @@
 #!/usr/bin/env npx tsx
 /**
  * CLI for News-Lag Arbitrage Agent
- * Usage: npx tsx src/cli.ts --headline "Fed cuts rates 25bps"
+ * Usage: 
+ *   npx tsx src/cli.ts --headline "Fed cuts rates 25bps"
+ *   npx tsx src/cli.ts verify --topic "Fed rates"
  */
 
 import 'dotenv/config';
@@ -9,6 +11,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { quickAnalyze } from './lib/agents/arbitrage-agent';
+import { runVerificationAgent } from './lib/agents/verification-agent';
 
 const program = new Command();
 
@@ -39,6 +42,123 @@ program
       await analyzeHeadline('Fed cuts interest rates by 25 basis points');
     }
   });
+
+// Verification Command
+program
+  .command('verify')
+  .description('🔬 Verify market equivalence between Kalshi and Polymarket')
+  .option('-t, --topic <text>', 'Topic to search and verify')
+  .action(async (options) => {
+    console.log(chalk.magenta.bold(`
+╔═══════════════════════════════════════════════════════════════════════╗
+║  🔬 SEMANTIC VERIFICATION ENGINE                                      ║
+║  Compare resolution criteria across prediction markets                ║
+╚═══════════════════════════════════════════════════════════════════════╝
+`));
+
+    if (options.topic) {
+      await verifyMarkets(options.topic);
+    } else {
+      console.log(chalk.yellow('No topic provided. Running demo with "Fed rates"...\n'));
+      await verifyMarkets('Fed rates');
+    }
+  });
+
+async function verifyMarkets(topic: string) {
+  console.log(chalk.white.bold('🔍 TOPIC:'));
+  console.log(chalk.white(`   "${topic}"\n`));
+
+  const spinner = ora('Searching and verifying markets...').start();
+
+  try {
+    const startTime = Date.now();
+    const result = await runVerificationAgent(topic);
+    const duration = Date.now() - startTime;
+
+    spinner.succeed(`Verification complete in ${duration}ms`);
+
+    // Statistics
+    console.log(chalk.magenta.bold('\n📊 VERIFICATION STATISTICS:'));
+    console.log(chalk.gray('─'.repeat(60)));
+    console.log(`   Markets Scanned:  ${chalk.cyan(result.statistics.marketsScanned.kalshi)} Kalshi, ${chalk.purple(result.statistics.marketsScanned.polymarket)} Polymarket`);
+    console.log(`   Matches Found:    ${chalk.white.bold(result.statistics.matchesFound)}`);
+    console.log(`   Safe to Trade:    ${chalk.green.bold(result.statistics.safeToTrade)}`);
+    console.log(`   Proceed Caution:  ${chalk.yellow.bold(result.statistics.proceedWithCaution)}`);
+    console.log(`   Avoid:            ${chalk.red.bold(result.statistics.avoid)}`);
+    console.log(`   Needs Review:     ${chalk.blue.bold(result.statistics.needsReview)}`);
+
+    // Market Pairs
+    if (result.matchedPairs.length > 0) {
+      console.log(chalk.magenta.bold('\n🎯 MATCHED MARKET PAIRS:\n'));
+
+      result.matchedPairs.forEach((pair, index) => {
+        const recColor = pair.verification.recommendation === 'SAFE_TO_TRADE' ? chalk.green :
+                        pair.verification.recommendation === 'PROCEED_WITH_CAUTION' ? chalk.yellow :
+                        pair.verification.recommendation === 'AVOID' ? chalk.red : chalk.blue;
+        const recIcon = pair.verification.recommendation === 'SAFE_TO_TRADE' ? '✅' :
+                       pair.verification.recommendation === 'PROCEED_WITH_CAUTION' ? '⚠️' :
+                       pair.verification.recommendation === 'AVOID' ? '🚫' : '🔍';
+
+        console.log(chalk.magenta(`┌${'─'.repeat(72)}┐`));
+        console.log(chalk.magenta(`│ ${chalk.bold(`${index + 1}. ${recIcon} ${pair.verification.recommendation.replace(/_/g, ' ')}`).padEnd(80)} │`));
+        console.log(chalk.magenta(`│ ${chalk.gray(`Confidence: ${Math.round(pair.verification.matchConfidence * 100)}% | Risk: ${pair.verification.riskLevel} | Spread: ${Math.round(pair.priceSpread || 0)}¢`).padEnd(70)} │`));
+        console.log(chalk.magenta(`├${'─'.repeat(72)}┤`));
+        
+        console.log(chalk.magenta(`│ ${chalk.cyan('KALSHI:')}`));
+        console.log(chalk.magenta(`│   ${chalk.gray(`Ticker: ${pair.kalshi.ticker}`)}`));
+        console.log(chalk.magenta(`│   ${chalk.white(pair.kalshi.question.slice(0, 68))}`));
+        if (pair.kalshi.price !== undefined) {
+          console.log(chalk.magenta(`│   ${chalk.green(`Price: ${Math.round(pair.kalshi.price * 100)}¢`)}`));
+        }
+        
+        console.log(chalk.magenta(`│`));
+        console.log(chalk.magenta(`│ ${chalk.hex('#9945FF')('POLYMARKET:')}`));
+        console.log(chalk.magenta(`│   ${chalk.gray(`ID: ${pair.polymarket.id.slice(0, 30)}...`)}`));
+        console.log(chalk.magenta(`│   ${chalk.white(pair.polymarket.question.slice(0, 68))}`));
+        if (pair.polymarket.price !== undefined) {
+          console.log(chalk.magenta(`│   ${chalk.green(`Price: ${Math.round(pair.polymarket.price * 100)}¢`)}`));
+        }
+
+        if (pair.verification.misalignments.length > 0) {
+          console.log(chalk.magenta(`├${'─'.repeat(72)}┤`));
+          console.log(chalk.magenta(`│ ${chalk.yellow('⚠️ MISALIGNMENTS:')}`));
+          pair.verification.misalignments.slice(0, 3).forEach(m => {
+            const sevColor = m.severity === 'CRITICAL' ? chalk.red : 
+                            m.severity === 'HIGH' ? chalk.hex('#FF6600') :
+                            m.severity === 'MEDIUM' ? chalk.yellow : chalk.gray;
+            const icon = {
+              'RESOLUTION_DATE': '📅',
+              'RESOLUTION_SOURCE': '📰',
+              'SCOPE': '🌍',
+              'THRESHOLD': '📏',
+              'DEFINITION': '📖',
+              'EDGE_CASE': '⚠️',
+            }[m.type] || '❓';
+            console.log(chalk.magenta(`│   ${icon} ${sevColor(`[${m.severity}]`)} ${m.description.slice(0, 55)}`));
+          });
+        }
+
+        if (pair.arbitrageOpportunity) {
+          console.log(chalk.magenta(`├${'─'.repeat(72)}┤`));
+          console.log(chalk.magenta(`│ ${chalk.green.bold('💰 ARBITRAGE OPPORTUNITY DETECTED!')}`));
+        }
+
+        console.log(chalk.magenta(`└${'─'.repeat(72)}┘\n`));
+      });
+    } else {
+      console.log(chalk.yellow('\n   No matching market pairs found.\n'));
+    }
+
+    // Summary
+    console.log(chalk.white.bold('📝 SUMMARY:'));
+    console.log(chalk.gray('─'.repeat(60)));
+    console.log(`   ${result.summary}\n`);
+
+  } catch (error) {
+    spinner.fail('Verification failed');
+    console.error(chalk.red(`\nError: ${error instanceof Error ? error.message : 'Unknown error'}`));
+  }
+}
 
 async function analyzeHeadline(headline: string) {
   console.log(chalk.white.bold('📰 HEADLINE:'));

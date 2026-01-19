@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cli": "npx tsx src/cli.ts"
+    "cli": "npx tsx src/cli.ts",
+    "monitor": "npx tsx src/monitor.ts",
+    "test-monitor": "npx tsx src/monitor.ts --test"
   },
   "dependencies": {
     "ai": "^4.0.0",
