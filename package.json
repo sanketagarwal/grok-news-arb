@@ -1,0 +1,36 @@
+{
+  "name": "grok-news-arb",
+  "version": "0.1.0",
+  "description": "News-lag arbitrage engine using Grok Live Search + Vercel AI SDK",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "cli": "npx tsx src/cli.ts"
+  },
+  "dependencies": {
+    "ai": "^4.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "@mastra/core": "^0.3.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0"
+  }
+}
