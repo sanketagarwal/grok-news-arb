@@ -79,41 +79,38 @@ npm run dev
 
 | Key | Purpose | Get It |
 |-----|---------|--------|
-| `GROK_API_KEY` | Grok Live Search (X/Twitter data) | [console.x.ai](https://console.x.ai/) |
-| `OPENAI_API_KEY` | Embeddings & AI Gateway | [platform.openai.com](https://platform.openai.com/) |
-| `REPLAY_LABS_API_KEY` | **Unified Polymarket + Kalshi API with semantic search** | Provided |
-| `KALSHI_API_KEY` | Kalshi market data (fallback) | [kalshi.com](https://kalshi.com/) → Settings → API |
-| `POLYMARKET_API_KEY` | Polymarket data (fallback) | [polymarket.com](https://polymarket.com/) |
+| `AI_GATEWAY_API_KEY` | **Vercel AI Gateway (unified access to all models)** | Provided ✅ |
+| `REPLAY_LABS_API_KEY` | **Unified Polymarket + Kalshi with semantic search** | Provided ✅ |
+| `GROK_API_KEY` | Grok Live Search fallback | [console.x.ai](https://console.x.ai/) |
+| `OPENAI_API_KEY` | OpenAI fallback | [platform.openai.com](https://platform.openai.com/) |
 
-### ⭐ Replay Labs (Primary Market Discovery)
+### ⭐ Vercel AI Gateway (Primary)
 
-Replay Labs provides a **unified API** with:
-- **Semantic search** across Polymarket + Kalshi using vector similarity
+Access **100+ AI models** through a single API:
+- `openai/gpt-4o` - Primary reasoning
+- `xai/grok-2` - X/Twitter live search
+- `anthropic/claude-sonnet-4` - Complex reasoning
+- `google/gemini-2.0-flash` - Fast inference
+
+### ⭐ Replay Labs (Market Discovery)
+
+Unified API for prediction markets:
+- **Semantic search** across Polymarket + Kalshi
 - **Market overlap detection** for cross-venue arbitrage
 - **Real-time prices** with JIIT caching
-- **Price history** for backtesting
 
 ### env.example
 
 ```env
-# Grok / xAI (REQUIRED)
-GROK_API_KEY=xai-xxxxxxxxxxxxxxxx
+# Vercel AI Gateway (PRIMARY - access to all models)
+AI_GATEWAY_API_KEY=vck_xxxxxxxxxxxxx
 
-# OpenAI for embeddings (REQUIRED)
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
-
-# AI Model (uses Vercel AI Gateway format)
-AI_MODEL=openai/gpt-4o
-
-# Replay Labs - Unified Polymarket + Kalshi API (RECOMMENDED)
+# Replay Labs (PRIMARY - Polymarket + Kalshi)
 REPLAY_LABS_API_KEY=rn_xxxxxxxxxxxxx
-REPLAY_LABS_BASE_URL=https://api.replaylab.io
 
-# Kalshi (fallback if not using Replay Labs)
-KALSHI_API_KEY=your_kalshi_key
-
-# Polymarket (fallback if not using Replay Labs)
-POLYMARKET_API_KEY=your_polymarket_key
+# Fallback API keys (optional)
+GROK_API_KEY=xai-xxxxxxxxxxxxxxxx
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
 ---

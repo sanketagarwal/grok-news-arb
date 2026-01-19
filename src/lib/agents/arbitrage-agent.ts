@@ -1,6 +1,6 @@
 /**
  * News-Lag Arbitrage Agent
- * Uses Vercel AI SDK with tools to find arbitrage opportunities
+ * Uses Vercel AI SDK with AI Gateway to access multiple model providers
  */
 
 import { generateText, tool, stepCountIs } from 'ai';
@@ -19,9 +19,7 @@ import {
   getMarketPrice,
   findMarketOverlaps,
 } from '../tools';
-
-// Use Vercel AI Gateway - supports multiple providers
-const MODEL = process.env.AI_MODEL || 'openai/gpt-4o';
+import { gateway, MODELS } from '../ai-gateway';
 
 export interface ArbitrageSignal {
   headline: string;
@@ -77,7 +75,7 @@ export async function runArbitrageAgent(headline: string): Promise<ArbitrageSign
   const startTime = Date.now();
   
   const result = await generateText({
-    model: MODEL as any, // Vercel AI Gateway model string
+    model: gateway(MODELS.primary), // Vercel AI Gateway - openai/gpt-4o
     system: SYSTEM_PROMPT,
     prompt: `Analyze this breaking news and find arbitrage opportunities:
 

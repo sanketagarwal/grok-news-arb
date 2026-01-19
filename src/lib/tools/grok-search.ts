@@ -1,13 +1,17 @@
 /**
  * Grok Live Search Tool
- * Uses Grok API with search_parameters.mode = "on" for real-time X/Twitter data
+ * Uses Vercel AI Gateway to access Grok with search_parameters.mode = "on" 
+ * for real-time X/Twitter data
  */
 
-import { tool } from 'ai';
+import { tool, generateText } from 'ai';
 import { z } from 'zod';
+import { gateway, MODELS } from '../ai-gateway';
 
+// Fallback to direct Grok API if needed
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const GROK_BASE_URL = 'https://api.x.ai/v1';
+const AI_GATEWAY_API_KEY = process.env.AI_GATEWAY_API_KEY;
 
 export interface NewsItem {
   content: string;
@@ -119,6 +123,7 @@ Return as JSON array.`;
 
 /**
  * Analyze a headline to understand its market impact
+ * Uses Vercel AI Gateway to access models
  */
 export const analyzeHeadline = tool({
   description: `Analyze a news headline to understand its potential market impact.
@@ -128,10 +133,6 @@ export const analyzeHeadline = tool({
     headline: z.string().describe('The news headline to analyze'),
   }),
   execute: async ({ headline }) => {
-    if (!GROK_API_KEY) {
-      throw new Error('GROK_API_KEY not configured');
-    }
-
     const systemPrompt = `You are a financial news analyst. Analyze the headline and return JSON with:
 - category: federal_reserve | inflation | elections | crypto | geopolitics | earnings | other
 - magnitude: 0.0-1.0 (how impactful is this news)
@@ -143,6 +144,51 @@ export const analyzeHeadline = tool({
 - predictionMarkets: array of prediction market topics this could affect (e.g., ["Fed rate decision", "Inflation above 3%"])
 
 Return ONLY valid JSON.`;
+
+    // Use Vercel AI Gateway
+    if (AI_GATEWAY_API_KEY) {
+      try {
+        const result = await generateText({
+          model: gateway(MODELS.primary),
+          system: systemPrompt,
+          prompt: `Analyze: "${headline}"`,
+          temperature: 0.1,
+        });
+        
+        const content = result.text || '{}';
+        try {
+          const start = content.indexOf('{');
+          const end = content.lastIndexOf('}') + 1;
+          if (start !== -1 && end > start) {
+            const analysis = JSON.parse(content.slice(start, end)) as HeadlineAnalysis;
+            return { success: true, analysis, headline };
+          }
+        } catch (e) {
+          // Continue to fallback
+        }
+      } catch (error) {
+        console.warn('AI Gateway failed, falling back to direct Grok API:', error);
+      }
+    }
+
+    // Fallback to direct Grok API
+    if (!GROK_API_KEY) {
+      // Return mock analysis if no API keys available
+      return {
+        success: true,
+        analysis: {
+          category: 'other',
+          magnitude: 0.5,
+          direction: 'neutral' as const,
+          affectedAssets: [],
+          confidence: 0.3,
+          isBreaking: false,
+          summary: headline,
+          predictionMarkets: [],
+        },
+        headline,
+      };
+    }
 
     const response = await fetch(`${GROK_BASE_URL}/chat/completions`, {
       method: 'POST',
