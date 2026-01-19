@@ -81,8 +81,17 @@ npm run dev
 |-----|---------|--------|
 | `GROK_API_KEY` | Grok Live Search (X/Twitter data) | [console.x.ai](https://console.x.ai/) |
 | `OPENAI_API_KEY` | Embeddings & AI Gateway | [platform.openai.com](https://platform.openai.com/) |
-| `KALSHI_API_KEY` | Kalshi market data | [kalshi.com](https://kalshi.com/) → Settings → API |
-| `POLYMARKET_API_KEY` | Polymarket data (optional) | [polymarket.com](https://polymarket.com/) |
+| `REPLAY_LABS_API_KEY` | **Unified Polymarket + Kalshi API with semantic search** | Provided |
+| `KALSHI_API_KEY` | Kalshi market data (fallback) | [kalshi.com](https://kalshi.com/) → Settings → API |
+| `POLYMARKET_API_KEY` | Polymarket data (fallback) | [polymarket.com](https://polymarket.com/) |
+
+### ⭐ Replay Labs (Primary Market Discovery)
+
+Replay Labs provides a **unified API** with:
+- **Semantic search** across Polymarket + Kalshi using vector similarity
+- **Market overlap detection** for cross-venue arbitrage
+- **Real-time prices** with JIIT caching
+- **Price history** for backtesting
 
 ### env.example
 
@@ -93,15 +102,18 @@ GROK_API_KEY=xai-xxxxxxxxxxxxxxxx
 # OpenAI for embeddings (REQUIRED)
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
 
-# Kalshi (REQUIRED)
-KALSHI_API_KEY=your_kalshi_key
-KALSHI_USE_DEMO=true
-
-# Polymarket (Optional)
-POLYMARKET_API_KEY=your_polymarket_key
-
 # AI Model (uses Vercel AI Gateway format)
 AI_MODEL=openai/gpt-4o
+
+# Replay Labs - Unified Polymarket + Kalshi API (RECOMMENDED)
+REPLAY_LABS_API_KEY=rn_xxxxxxxxxxxxx
+REPLAY_LABS_BASE_URL=https://api.replaylab.io
+
+# Kalshi (fallback if not using Replay Labs)
+KALSHI_API_KEY=your_kalshi_key
+
+# Polymarket (fallback if not using Replay Labs)
+POLYMARKET_API_KEY=your_polymarket_key
 ```
 
 ---
@@ -171,8 +183,11 @@ const result = await generateText({
 | `searchBreakingNews` | Search X/Twitter via Grok Live Search |
 | `analyzeHeadline` | Analyze news for market impact |
 | `verifyNews` | Verify headline against X posts |
-| `searchKalshiMarkets` | Search Kalshi markets |
-| `searchPolymarketMarkets` | Search Polymarket markets |
+| **`semanticSearchMarkets`** | **Semantic search across Polymarket + Kalshi (Replay Labs)** |
+| **`getMarketPrice`** | **Get real-time prices (Replay Labs)** |
+| **`findMarketOverlaps`** | **Find cross-venue arbitrage opportunities (Replay Labs)** |
+| `searchKalshiMarkets` | Search Kalshi markets (fallback) |
+| `searchPolymarketMarkets` | Search Polymarket markets (fallback) |
 | `estimateFairValue` | Estimate fair value given news |
 | `generateTradeRecommendation` | Generate trade signal |
 

@@ -14,6 +14,10 @@ import {
   searchPolymarketMarkets,
   estimateFairValue,
   generateTradeRecommendation,
+  // Replay Labs - Primary market discovery
+  semanticSearchMarkets,
+  getMarketPrice,
+  findMarketOverlaps,
 } from '../tools';
 
 // Use Vercel AI Gateway - supports multiple providers
@@ -80,18 +84,25 @@ export async function runArbitrageAgent(headline: string): Promise<ArbitrageSign
 "${headline}"
 
 Steps:
-1. Analyze the headline for market impact
-2. Search Kalshi markets for related predictions
-3. Search Polymarket for related predictions  
-4. For the top 5 most relevant markets, estimate fair value
+1. Analyze the headline for market impact (category, magnitude, direction)
+2. Use semanticSearchMarkets to find related prediction markets on both Polymarket and Kalshi
+3. For the top 5 most relevant markets (highest similarity scores), get fresh prices with getMarketPrice
+4. Estimate fair value for each market given the news
 5. Generate trade recommendations for markets with >5% edge
+6. Optionally check for cross-venue overlaps with findMarketOverlaps for arbitrage
 
 Provide a complete analysis with specific trade recommendations.`,
     tools: {
       analyzeHeadline,
+      // Replay Labs semantic search (primary - searches both Polymarket + Kalshi)
+      semanticSearchMarkets,
+      getMarketPrice,
+      findMarketOverlaps,
+      // Fallback individual venue searches
       searchKalshiMarkets,
       searchPolymarketMarkets,
       getKalshiOrderbook,
+      // Fair value & signals
       estimateFairValue,
       generateTradeRecommendation,
     },
@@ -140,30 +151,33 @@ Provide a complete analysis with specific trade recommendations.`,
 
 /**
  * Quick analysis without full agent workflow
+ * Uses Replay Labs semantic search for better market matching
  */
 export async function quickAnalyze(headline: string) {
   // 1. Analyze headline
   const analysis = await analyzeHeadline.execute({ headline }, {} as any);
   
-  // 2. Search markets in parallel
-  const [kalshiResult, polymarketResult] = await Promise.all([
-    searchKalshiMarkets.execute({ 
-      query: extractKeywords(headline), 
-      status: 'open', 
-      limit: 10 
-    }, {} as any),
-    searchPolymarketMarkets.execute({ 
-      query: extractKeywords(headline), 
-      active: true, 
-      limit: 10 
-    }, {} as any),
-  ]);
+  // 2. Use Replay Labs semantic search (searches BOTH Polymarket + Kalshi)
+  const semanticResult = await semanticSearchMarkets.execute({
+    query: headline,
+    limit: 10,
+    activeOnly: true,
+  }, {} as any);
 
-  // 3. Estimate fair values for top markets
-  const allMarkets = [
-    ...(kalshiResult.markets || []).map((m: any) => ({ ...m, platform: 'kalshi' })),
-    ...(polymarketResult.markets || []).map((m: any) => ({ ...m, platform: 'polymarket' })),
-  ];
+  // 3. Transform results to common format
+  const allMarkets = (semanticResult.markets || []).map((result: any) => {
+    const m = result.market || result;
+    return {
+      ...m,
+      platform: (m.venue || 'unknown').toLowerCase(),
+      ticker: m.id,
+      title: m.question,
+      question: m.question,
+      yesPrice: m.metadata?.yesPrice || 0.5,
+      liquidity: m.metadata?.liquidity || m.metadata?.volume || 50000,
+      similarityScore: result.score || 0.5,
+    };
+  });
 
   const signals: MarketSignal[] = [];
   
