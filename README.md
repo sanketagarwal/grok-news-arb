@@ -1,304 +1,230 @@
 # 🚀 Grok News-Lag Arbitrage Engine
 
-**Real-time breaking news → prediction market arbitrage signals**
-
-An AI agent built with **Vercel AI SDK** that monitors X/Twitter via **Grok API Live Search**, maps news events to Kalshi/Polymarket markets using semantic search, and generates trade signals before prices fully adjust.
-
-![Demo](https://img.shields.io/badge/Status-Night%201%20Demo-green)
-![Framework](https://img.shields.io/badge/Framework-Vercel%20AI%20SDK-black)
-![License](https://img.shields.io/badge/License-MIT-blue)
-
-## 🎯 What It Does
-
-```
-Breaking News → Grok Live Search → Semantic Match → Find Markets → Fair Value → Trade Signals
-      ↓              ↓                  ↓              ↓            ↓            ↓
-"Fed cuts     Search X/Twitter    Match to         Kalshi &    Estimate    "BUY YES
- rates"       for confirmation    market topics    Polymarket  new price    @ 72¢"
-```
-
-### Night-1 Demo
-
-A CLI that:
-1. Takes a news headline ("Fed cuts rates 25bps")
-2. Uses Grok Live Search to analyze/verify the news
-3. Finds 5 affected markets across Kalshi + Polymarket
-4. Fetches current prices
-5. Outputs **fair value shift estimate** vs current price with entry recommendations
-
-## 💰 Expected Value
-
-| Scenario | Daily EV |
-|----------|----------|
-| Best days (multiple news events) | $200-500 |
-| Typical days | $20-100 |
-| Quiet days | $0 |
-
-**Constraints:** $100-250 max position before slippage, edge depends on speed
+**When news breaks, find which prediction markets are affected before prices move.**
 
 ---
 
-## ⚡ Quick Start
+## What This Does (Simple Version)
 
-### 1. Clone & Install
+> "When news breaks, this bot instantly finds which betting markets are affected and tells you what to buy before the price moves."
+
+---
+
+## How It Works (Step by Step)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 1: NEWS HAPPENS                                               │
+│                                                                      │
+│  📰 "Fed cuts interest rates by 25 basis points"                    │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 2: FIND AFFECTED MARKETS                                      │
+│                                                                      │
+│  🔍 Semantic search across Polymarket + Kalshi                      │
+│                                                                      │
+│  Found:                                                              │
+│  • "Will Fed cut rates in January?" (Polymarket) - 64% match        │
+│  • "Will Fed cut rates by 25bps at September meeting?" (Kalshi)     │
+│  • "Will inflation be above 3%?" (Kalshi)                           │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 3: CHECK CURRENT PRICES                                       │
+│                                                                      │
+│  💰 "Will Fed cut rates in January?"                                │
+│     Current price: 65¢ (market thinks 65% chance)                   │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 4: CALCULATE FAIR VALUE                                       │
+│                                                                      │
+│  🧮 News says it HAPPENED → probability is ~99%                     │
+│     Fair value: 99¢                                                  │
+│     Current price: 65¢                                               │
+│     Edge: +34¢ (52% profit opportunity!)                            │
+└─────────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 5: GENERATE TRADE SIGNAL                                      │
+│                                                                      │
+│  💹 STRONG BUY YES                                                   │
+│     Entry: ≤67¢                                                      │
+│     Target: 99¢                                                      │
+│     Stop Loss: 53¢                                                   │
+│     Size: $250                                                       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Why This Makes Money
+
+```
+Timeline:
+
+T+0 seconds:    📰 News breaks: "Fed cuts rates"
+                Market price: 65¢
+                
+T+5 seconds:    🤖 YOUR BOT sees news, finds market, calculates edge
+                YOU BUY at 65¢
+                
+T+30 seconds:   📱 Traders start reading news
+                Price rises to 75¢
+                
+T+2 minutes:    📈 Everyone knows now
+                Price rises to 90¢
+                
+T+10 minutes:   ✅ Market fully adjusts
+                Price settles at 99¢
+                
+                💰 YOU PROFIT: 34¢ per contract (52% return)
+```
+
+**You're faster than humans** who need to see news → think → search → decide.
+
+---
+
+## Quick Start
+
+### 1. Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/grok-news-arb.git
+git clone https://github.com/sanketagarwal/grok-news-arb.git
 cd grok-news-arb
 npm install
 ```
 
-### 2. Configure API Keys
+### 2. Configure
 
 ```bash
 cp env.example .env
+# Edit .env with your API keys
 ```
 
-Edit `.env` with your API keys (see [Required API Keys](#-required-api-keys) below).
-
-### 3. Run Live Monitor (NEW!)
+### 3. Run
 
 ```bash
-# Start continuous news monitoring
-npm run monitor
-
-# Test with sample headlines
+# Test with sample headlines (see real Polymarket + Kalshi markets!)
 npm run test-monitor
 
-# Analyze specific headline
-npm run monitor -- --headline "Fed cuts rates 25bps"
-
-# Custom poll interval (default 30s)
-npm run monitor -- --interval 60
-```
-
-### 4. Run CLI Demo
-
-```bash
-# Analyze a headline (one-time)
+# Analyze a specific headline
 npm run cli -- --headline "Fed cuts rates 25bps"
 
-# Interactive mode
-npm run cli -- --interactive
-```
-
-### 5. Run Web UI
-
-```bash
-npm run dev
-# Open http://localhost:3000
+# Start live monitoring
+npm run monitor
 ```
 
 ---
 
-## 🔑 Required API Keys
+## Sample Output
 
-| Key | Purpose | Get It |
-|-----|---------|--------|
-| `AI_GATEWAY_API_KEY` | **Vercel AI Gateway (unified access to all models)** | Provided ✅ |
-| `REPLAY_LABS_API_KEY` | **Unified Polymarket + Kalshi with semantic search** | Provided ✅ |
-| `GROK_API_KEY` | Grok Live Search fallback | [console.x.ai](https://console.x.ai/) |
-| `OPENAI_API_KEY` | OpenAI fallback | [platform.openai.com](https://platform.openai.com/) |
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║  📡 GROK NEWS-LAG ARBITRAGE - LIVE MONITOR                            ║
+╚═══════════════════════════════════════════════════════════════════════╝
 
-### ⭐ Vercel AI Gateway (Primary)
+📰 "Fed cuts interest rates by 25 basis points at FOMC meeting"
+   Category: federal_reserve | 🟡 MEDIUM
 
-Access **100+ AI models** through a single API:
-- `openai/gpt-4o` - Primary reasoning
-- `xai/grok-2` - X/Twitter live search
-- `anthropic/claude-sonnet-4` - Complex reasoning
-- `google/gemini-2.0-flash` - Fast inference
+🎯 AFFECTED MARKETS:
 
-### ⭐ Replay Labs (Market Discovery)
+┌────────────────────────────────────────────────────────────────────────┐
+│ [POLYMARKET] Fed decreases interest rates by 25 bps after January 20  │
+│ Match: 64%                                                             │
+├────────────────────────────────────────────────────────────────────────┤
+│ Current: 50¢    │ Fair Value: 48¢    │ Edge: -2¢ (-4.8%)              │
+│ ⏸️  HOLD - Edge too small for confident trade                          │
+└────────────────────────────────────────────────────────────────────────┘
 
-Unified API for prediction markets:
-- **Semantic search** across Polymarket + Kalshi
-- **Market overlap detection** for cross-venue arbitrage
-- **Real-time prices** with JIIT caching
+┌────────────────────────────────────────────────────────────────────────┐
+│ [KALSHI] Will the Fed cut rates 1 times at emergency meetings?        │
+│ Match: 60%                                                             │
+├────────────────────────────────────────────────────────────────────────┤
+│ Current: 70¢    │ Fair Value: 85¢    │ Edge: +15¢ (+21.8%)            │
+│ 💹 STRONG_BUY YES    Confidence: HIGH    Size: $250                   │
+│ Entry: ≤72¢    Target: 85¢     Stop: 58¢                              │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-### env.example
+---
+
+## Required API Keys
+
+| Key | What It Does | 
+|-----|--------------|
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway - access to GPT-4, Grok, Claude |
+| `REPLAY_LABS_API_KEY` | Semantic search across Polymarket + Kalshi |
 
 ```env
-# Vercel AI Gateway (PRIMARY - access to all models)
+# .env file
 AI_GATEWAY_API_KEY=vck_xxxxxxxxxxxxx
-
-# Replay Labs (PRIMARY - Polymarket + Kalshi)
 REPLAY_LABS_API_KEY=rn_xxxxxxxxxxxxx
-
-# Fallback API keys (optional)
-GROK_API_KEY=xai-xxxxxxxxxxxxxxxx
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
+REPLAY_LABS_BASE_URL=https://replay-lab-delta.preview.recall.network
 ```
 
 ---
 
-## 📁 Project Structure
+## What's Built vs What's Not
+
+| ✅ Built | ❌ Not Built (Future) |
+|----------|----------------------|
+| News → Market matching | Auto-trading |
+| Semantic search (real Polymarket + Kalshi) | Live news feed from Grok |
+| Fair value calculation | Position tracking |
+| Trade signals with entry/stop/target | Risk management |
+| CLI + Web UI | P&L dashboard |
+
+---
+
+## Commands
+
+| Command | What It Does |
+|---------|--------------|
+| `npm run test-monitor` | Test with 5 sample headlines |
+| `npm run monitor` | Start live news monitoring |
+| `npm run cli -- --headline "..."` | Analyze specific headline |
+| `npm run dev` | Start web UI at localhost:3000 |
+
+---
+
+## Tech Stack
+
+- **Vercel AI SDK** - AI agent framework with tool calling
+- **Replay Labs API** - Semantic search across prediction markets
+- **Vercel AI Gateway** - Unified access to GPT-4, Grok, Claude
+- **Next.js** - Web UI
+- **TypeScript** - Type safety
+
+---
+
+## Project Structure
 
 ```
 grok-news-arb/
 ├── src/
-│   ├── app/                    # Next.js app
-│   │   ├── api/agent/route.ts  # API endpoint
-│   │   └── page.tsx            # Web UI
+│   ├── monitor.ts              # Live monitoring CLI
+│   ├── cli.ts                  # One-time analysis CLI
 │   ├── lib/
-│   │   ├── tools/              # Vercel AI SDK tools
-│   │   │   ├── grok-search.ts  # Grok Live Search
-│   │   │   ├── kalshi.ts       # Kalshi markets
-│   │   │   ├── polymarket.ts   # Polymarket
-│   │   │   └── fair-value.ts   # Fair value estimation
-│   │   └── agents/
-│   │       └── arbitrage-agent.ts  # Main agent
-│   └── cli.ts                  # CLI interface
-├── package.json
-├── env.example
-└── README.md
+│   │   ├── services/
+│   │   │   └── news-monitor.ts # Core monitoring logic
+│   │   ├── tools/              # AI tools (search, fair value, etc.)
+│   │   └── agents/             # AI agents
+│   └── app/                    # Next.js web UI
+├── .env                        # Your API keys (not committed)
+├── env.example                 # Example env file
+└── package.json
 ```
 
 ---
 
-## 🛠️ Architecture
+## License
 
-Built with **Vercel AI SDK** using the `tool()` function pattern:
-
-```typescript
-import { generateText, tool, stepCountIs } from 'ai';
-import { z } from 'zod';
-
-// Define tools
-const searchKalshiMarkets = tool({
-  description: 'Search Kalshi prediction markets by keyword',
-  parameters: z.object({
-    query: z.string(),
-    limit: z.number().default(10),
-  }),
-  execute: async ({ query, limit }) => {
-    // Fetch from Kalshi API
-  },
-});
-
-// Run agent with multi-step reasoning
-const result = await generateText({
-  model: 'openai/gpt-4o',
-  prompt: 'Find arbitrage opportunities for: "Fed cuts rates 25bps"',
-  tools: {
-    searchKalshiMarkets,
-    searchPolymarketMarkets,
-    estimateFairValue,
-    generateTradeRecommendation,
-  },
-  stopWhen: stepCountIs(10),
-});
-```
-
-### Tools Available
-
-| Tool | Description |
-|------|-------------|
-| `searchBreakingNews` | Search X/Twitter via Grok Live Search |
-| `analyzeHeadline` | Analyze news for market impact |
-| `verifyNews` | Verify headline against X posts |
-| **`semanticSearchMarkets`** | **Semantic search across Polymarket + Kalshi (Replay Labs)** |
-| **`getMarketPrice`** | **Get real-time prices (Replay Labs)** |
-| **`findMarketOverlaps`** | **Find cross-venue arbitrage opportunities (Replay Labs)** |
-| `searchKalshiMarkets` | Search Kalshi markets (fallback) |
-| `searchPolymarketMarkets` | Search Polymarket markets (fallback) |
-| `estimateFairValue` | Estimate fair value given news |
-| `generateTradeRecommendation` | Generate trade signal |
+MIT
 
 ---
 
-## 📊 Sample Output
+## Disclaimer
 
-```
-╔═══════════════════════════════════════════════════════════════════════╗
-║  🚀 GROK NEWS-LAG ARBITRAGE ENGINE                                    ║
-╚═══════════════════════════════════════════════════════════════════════╝
-
-📰 HEADLINE: "Fed cuts interest rates by 25 basis points"
-
-📊 NEWS ANALYSIS:
-   Category:   federal_reserve
-   Magnitude:  ████████░░ 80%
-   Direction:  📈 POSITIVE
-   Confidence: HIGH (85%)
-
-🎯 TOP AFFECTED MARKETS:
-
-┌────────────────────────────────────────────────────────────────────┐
-│ 1. Will Fed cut rates in January 2026? (Kalshi)                    │
-│    Platform: KALSHI | Ticker: FED-26JAN-T4.50                      │
-├────────────────────────────────────────────────────────────────────┤
-│ Current: 72¢  │  Fair Value: 89¢  │  Edge: +17%                    │
-│ 💹 SIGNAL: BUY YES                                                  │
-│ Entry: 74¢  │  Target: 89¢  │  Stop: 60¢                           │
-│ Size: $250  │  Confidence: HIGH                                    │
-└────────────────────────────────────────────────────────────────────┘
-
-📝 SUMMARY:
-Found 3 arbitrage opportunities: 2 BUY signals, 1 SELL signal.
-Best opportunity: Fed rate cut market with 17% edge.
-```
-
----
-
-## 🚀 API Usage
-
-```bash
-# Analyze a headline
-curl -X POST http://localhost:3000/api/agent \
-  -H "Content-Type: application/json" \
-  -d '{"headline": "Fed cuts rates 25bps", "mode": "quick"}'
-```
-
-Response:
-```json
-{
-  "success": true,
-  "headline": "Fed cuts rates 25bps",
-  "analysis": {
-    "category": "federal_reserve",
-    "magnitude": 0.8,
-    "direction": "positive",
-    "confidence": 0.85
-  },
-  "markets": [
-    {
-      "platform": "kalshi",
-      "ticker": "FED-26JAN-T4.50",
-      "question": "Will Fed cut rates in January 2026?",
-      "currentPrice": 0.72,
-      "fairValue": 0.89,
-      "edge": 0.17,
-      "signal": "BUY",
-      "action": "BUY YES",
-      "suggestedSize": 250,
-      "confidence": "HIGH"
-    }
-  ],
-  "summary": "Found 3 arbitrage opportunities with 17% best edge."
-}
-```
-
----
-
-## 📈 Roadmap
-
-- [x] **Night 1:** CLI demo with manual headline input
-- [ ] **Week 1:** Live Grok monitoring + auto-detection
-- [ ] **Week 2:** Backtesting framework
-- [ ] **Week 3:** Auto-execution + risk management
-- [ ] **Week 4:** Dashboard + Telegram/Discord alerts
-
----
-
-## ⚠️ Disclaimers
-
-- This is experimental trading software. Use at your own risk.
-- Prediction markets have regulatory restrictions in some jurisdictions.
-- Past performance does not guarantee future results.
-- The edge depends on execution speed and market conditions.
-
----
-
-## 📜 License
-
-MIT License
+This is experimental software. Prediction markets have regulatory restrictions in some jurisdictions. Use at your own risk.
